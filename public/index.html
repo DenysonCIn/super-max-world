@@ -1,0 +1,92 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#131b31"><title>Super Max World — Em busca da Picanha prometida</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111a2b;color:#fff;font-family:monospace}body{display:grid;place-items:center;touch-action:none;user-select:none}#frame{position:relative;width:min(100vw,177.777vh);height:min(56.25vw,100dvh);overflow:hidden;background:#78cbef;box-shadow:0 0 80px #050c20}canvas{display:block;width:100%;height:100%;image-rendering:pixelated}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#101e3aa8;z-index:4;padding:16px}.panel{max-width:650px;text-align:center;background:#17233df5;border:4px solid #ffdf85;box-shadow:8px 8px 0 #091326;padding:clamp(14px,3vw,30px)}.eyebrow{color:#8cf0d0;letter-spacing:3px;font-size:12px}h1{font-size:clamp(25px,5vw,52px);line-height:.95;margin:16px 0 8px;color:#ffdb69;text-shadow:3px 3px #b64839}h2{font-size:clamp(14px,2.1vw,21px);margin:10px 0 18px}.panel p{line-height:1.6;font-size:clamp(11px,1.6vw,15px)}button{font:700 14px monospace;color:#182238;cursor:pointer;border:0;border-bottom:4px solid #b68031;background:#ffdb69;padding:13px 24px;touch-action:none}button:active{transform:translateY(2px)}.small{font-size:10px!important;color:#afbbd1}#hud{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:2px 2px #152549;font-weight:bold;font-size:clamp(11px,1.6vw,17px);pointer-events:none}#hud small{display:block;font-size:9px;letter-spacing:2px;color:#e5f7ff;margin-top:5px}#actions{display:flex;gap:6px;pointer-events:auto}#actions button{font-size:12px;padding:7px 10px;background:#142844cb;color:white;border:2px solid #fff5}#touch{position:absolute;bottom:max(10px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:flex;justify-content:space-between;pointer-events:none}.keys{display:flex;gap:10px;align-items:end}.pad{pointer-events:auto;width:64px;height:58px;padding:0;background:#14284cbf;border:2px solid #ffffff80;border-bottom:5px solid #0b1837;color:white;font-size:25px;border-radius:10px}.jump{width:83px;height:66px;background:#dd594bcc;font-size:14px}.pad.on{background:#efbc4c}#rotate{display:none;position:fixed;inset:0;background:#14223cf7;z-index:10;align-items:center;justify-content:center;text-align:center;padding:24px}#rotate span{display:block;font-size:55px;margin-bottom:20px}[hidden]{display:none!important}@media(orientation:portrait) and (max-width:800px){#rotate{display:flex}}@media(max-height:430px){.panel{padding:12px 24px}h1{margin:8px 0;font-size:32px}.panel p{margin:8px}.pad{height:48px;width:56px}.jump{height:56px;width:74px}}
+</style></head><body><main id="frame"><canvas id="game" width="640" height="360" aria-label="Jogo de plataforma Super Max World"></canvas><div id="hud"><div>MAX <span id="lives">♥♥♥</span><small>VALE DAS PROMESSAS · 1–1</small></div><div id="count">MOEDAS 00</div><div id="actions"><button id="sound" aria-label="Alternar som">SOM: ON</button><button id="pause" aria-label="Pausar">Ⅱ</button><button id="full" aria-label="Tela cheia">⛶</button></div></div><div id="touch"><div class="keys"><button class="pad" data-key="ArrowLeft" aria-label="Esquerda">◀</button><button class="pad" data-key="ArrowRight" aria-label="Direita">▶</button><button class="pad" data-key="ArrowDown" aria-label="Agachar">▼</button></div><button class="pad jump" data-key="ArrowUp" aria-label="Pular">▲<br>PULO</button></div><div class="overlay" id="overlay"><div class="panel"><div class="eyebrow" id="tag">UMA AVENTURA DE 16 BITS</div><h1 id="title">SUPER MAX<br>WORLD</h1><h2 id="subtitle">Em busca da Picanha prometida</h2><p id="message">Lula está fugindo na nuvem com a picanha!<br>Corra, pule os obstáculos e alcance o churrasco.</p><button id="start">JOGAR AGORA ▶</button><p class="small" id="help">← → mover · ↑ pular · ↓ agachar · P pausar<br>No celular, use os botões na tela. Uma fase. Uma promessa.</p><p class="small">Paródia fictícia · arte e sons desenhados para este jogo</p></div></div></main><div id="rotate"><div><span>↻</span><h2>Vire o celular</h2><p>Super Max World foi feito para jogar<br>com a tela na horizontal.</p></div></div><script>
+'use strict';
+const c=document.getElementById('game'),ctx=c.getContext('2d'),$=s=>document.getElementById(s);ctx.imageSmoothingEnabled=false;
+const W=640,H=360,LENGTH=3580,G=1000;let mode='title',muted=false,ac,t=0,cam=0,coins=0,lives=3,checkpoint=50,inv=0,player,cloudX=310,winTime=0;
+const keys=new Set(),pointerKeys=new Map();let jumpBuffer=0,coyote=0;
+const ground=[{x:0,y:304,w:810,h:70},{x:900,y:304,w:840,h:70},{x:1840,y:304,w:1740,h:70}];
+const ledges=[{x:340,y:246,w:100,h:18},{x:540,y:201,w:100,h:18},{x:770,y:242,w:180,h:18},{x:1120,y:244,w:115,h:18},{x:1370,y:212,w:100,h:18},{x:1680,y:240,w:205,h:18},{x:2130,y:240,w:110,h:18},{x:2380,y:198,w:100,h:18},{x:2650,y:242,w:130,h:18},{x:3070,y:255,w:95,h:18},{x:3200,y:210,w:95,h:18}];
+const pipes=[{x:1010,y:265,w:40,h:39},{x:1960,y:253,w:40,h:51},{x:2520,y:267,w:40,h:37}];let enemies=[],tokens=[];
+function reset(){player={x:50,y:260,w:20,h:30,vx:0,vy:0,dir:1,on:false};coins=0;lives=3;cam=0;checkpoint=50;inv=0;cloudX=310;keys.clear();jumpBuffer=0;enemies=[640,1270,1520,2050,2300,2830].map((x,i)=>({x,y:284,w:22,h:20,home:x,dir:i%2?1:-1,dead:false}));tokens=[];for(let x=220;x<2950;x+=120)if(!((x>810&&x<900)||(x>1740&&x<1840)))tokens.push({x,y:260,taken:false});ledges.forEach(p=>{for(let x=p.x+20;x<p.x+p.w;x+=32)tokens.push({x,y:p.y-25,taken:false})});mode='playing';$('overlay').hidden=true;sync();}
+function sync(){$('lives').textContent='♥'.repeat(lives);$('count').textContent='MOEDAS '+String(coins).padStart(2,'0')}
+function tone(f,d=.09,type='square',volume=.035){if(muted)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(80,f*.6),ac.currentTime+d);g.gain.setValueAtTime(volume,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+function show(tag,title,msg,button){$('tag').textContent=tag;$('title').textContent=title;$('subtitle').textContent='Em busca da Picanha prometida';$('message').textContent=msg;$('start').textContent=button;$('help').hidden=true;$('overlay').hidden=false}
+function damage(){if(inv>0)return;lives--;sync();tone(110,.25,'sawtooth');if(lives<=0){mode='lost';show('FIM DE JOGO','A PROMESSA ESCAPOU','A nuvem foi mais longe. Tente de novo e alcance a picanha!','TENTAR NOVAMENTE ▶')}else{player.x=checkpoint;player.y=240;player.vx=0;player.vy=0;inv=2;cloudX=Math.min(3330,player.x+260)}}
+function win(){mode='won';winTime=t;show('FASE COMPLETA!','PICANHA CONQUISTADA!','Você pegou a picanha e percebeu que na verdade era coxão duro.','JOGAR NOVAMENTE ▶');[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.18),i*120))}
+function pause(){if(mode==='playing'){mode='paused';keys.clear();show('PAUSA','PAUSA PARA O CHURRASCO','Sua picanha pode esperar um pouquinho.','CONTINUAR ▶')}else if(mode==='paused'){mode='playing';$('overlay').hidden=true}}
+$('start').onclick=()=>{tone(600);if(mode==='paused'){mode='playing';$('overlay').hidden=true}else reset()};$('pause').onclick=pause;$('sound').onclick=()=>{muted=!muted;$('sound').textContent='SOM: '+(muted?'OFF':'ON')};$('full').onclick=async()=>{try{if(!document.fullscreenElement)await $('frame').requestFullscreen();else await document.exitFullscreen()}catch(e){}};
+function press(k){if(!keys.has(k)&&(k==='ArrowUp'||k===' '))jumpBuffer=.15;keys.add(k)}
+addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)){e.preventDefault();press(e.key)}if(e.key.toLowerCase()==='p'&&!e.repeat)pause();if(e.key==='Enter'&&mode!=='playing')$('start').click()});addEventListener('keyup',e=>{keys.delete(e.key);if((e.key==='ArrowUp'||e.key===' ')&&player&&player.vy<-160)player.vy=-160});
+document.querySelectorAll('[data-key]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);pointerKeys.set(e.pointerId,b.dataset.key);press(b.dataset.key);b.classList.add('on')};const end=e=>{keys.delete(pointerKeys.get(e.pointerId));pointerKeys.delete(e.pointerId);b.classList.remove('on')};b.onpointerup=end;b.onpointercancel=end;b.onlostpointercapture=end});
+function clear(){keys.clear();pointerKeys.clear();document.querySelectorAll('.on').forEach(b=>b.classList.remove('on'));if(mode==='playing')pause()}addEventListener('blur',clear);document.addEventListener('visibilitychange',()=>{if(document.hidden)clear()});
+function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function update(dt){if(mode!=='playing')return;inv=Math.max(0,inv-dt);jumpBuffer=Math.max(0,jumpBuffer-dt);coyote=player.on?.1:Math.max(0,coyote-dt);const axis=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0);player.vx=axis*(keys.has('ArrowDown')?75:185);if(axis)player.dir=axis;if(jumpBuffer>0&&coyote>0){player.vy=-405;player.on=false;coyote=0;jumpBuffer=0;tone(440,.14)}
+player.x+=player.vx*dt;player.x=Math.max(0,Math.min(LENGTH-player.w,player.x));for(const p of pipes)if(hit(player,p)){player.x=player.vx>0?p.x-player.w:p.x+p.w}
+const oldY=player.y;player.vy+=G*dt;player.y+=player.vy*dt;player.on=false;for(const p of [...ground,...ledges,...pipes])if(player.x+player.w>p.x&&player.x<p.x+p.w&&oldY+player.h<=p.y+1&&player.y+player.h>=p.y&&player.vy>=0){player.y=p.y-player.h;player.vy=0;player.on=true}
+if(player.y>390){damage();return}if(player.x>1850&&checkpoint<1850){checkpoint=1870;tone(800,.2)}
+for(const e of enemies){if(e.dead)continue;e.x+=e.dir*30*dt;if(Math.abs(e.x-e.home)>55)e.dir*=-1;if(hit(player,e)){if(player.vy>0&&oldY+player.h<=e.y+8){e.dead=true;player.vy=-230;tone(220)}else damage()}}
+for(const q of tokens)if(!q.taken&&Math.abs(player.x+10-q.x)<19&&Math.abs(player.y+15-q.y)<24){q.taken=true;coins++;tone(1050,.08);sync()}
+cloudX+=((Math.min(3330,player.x+255))-cloudX)*Math.min(1,dt*3);cam=Math.max(0,Math.min(LENGTH-W,player.x-180));if(hit(player,{x:3350,y:216,w:30,h:24}))win();}
+function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+function text(s,x,y,size=10,color='#fff'){ctx.font='bold '+size+'px monospace';ctx.fillStyle='#16334b';ctx.fillText(s,Math.round(x)+1,Math.round(y)+1);ctx.fillStyle=color;ctx.fillText(s,Math.round(x),Math.round(y))}
+function cloud(x,y,s=1){ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(s,s);rect(0,10,72,18,'#d9edff');rect(8,2,54,26,'#fffdf0');rect(20,-5,29,12,'#fffdf0');rect(8,26,55,4,'#98bcd9');ctx.restore()}
+const sprite=[
+'......RRRRRR........',
+'.....RRRRRRRRRR.....',
+'.....RRRWWRRRRRR....',
+'.....HHHSSSSBS......',
+'....HSSSSSSSBS......',
+'....HSSSSSSSSSS.....',
+'....KKSSSKKKSSS.....',
+'....KKKSKSSSKK......',
+'....KKKKKSSKKKK.....',
+'...RKKKKKKKKKKKR....',
+'..RRKKKKKKKKKKRRR...',
+'.RRRRKKKKKKKKRRRRR..',
+'.WWRRRKKKKKKRRRWW...',
+'.WWRRRRKKKKRRRRWW...',
+'...RRRRRRRRRRRR.....',
+'....RRRRRRRRRR......',
+'....RRRRRRRRRR......',
+'....RRRRRRRRRR......',
+'....RRRRRRRRRR......',
+'....BBBBBBBBBB......',
+'....BBBB..BBBB......',
+'....BBBB..BBBB......',
+'...HHHH....HHHH.....',
+'..HHHHH....HHHHH....'];
+function mario(x,y){
+const crouch=keys.has('ArrowDown')&&player.on;
+// Name and shirt number stay readable in either direction.
+rect(x-6,y-16,33,11,'#14233ddd');text('MAX',x+1,y-8,9,'#ffe287');
+ctx.save();ctx.translate(Math.round(x+10),Math.round(y));
+if(crouch){ctx.translate(0,9);ctx.scale(1,.7)}
+ctx.save();ctx.scale(player.dir*1.3,1.3);
+const pal={R:'#e8313b',H:'#543526',S:'#f3bb86',B:'#293957',W:'#fff0d4',K:'#201a1b'};
+sprite.forEach((row,yy)=>[...row].forEach((p,xx)=>{if(p!=='.'){const off=yy>19&&player.on&&player.vx?Math.sin(t*18)*(yy-19)*.15:0;rect(xx-10+off,yy,1,1,pal[p])}}));
+// Small highlights give the full dark beard a textured silhouette.
+rect(-5,9,1,3,'#44312b');rect(3,9,1,3,'#44312b');ctx.restore();
+const digits=['0100111','1100001','0100111','0100001','1110111'];
+digits.forEach((row,yy)=>[...row].forEach((v,xx)=>{if(v==='1')rect(xx-4,19+yy,1,1,'#fff3dc')}));ctx.restore();}
+
+function lula(x,y){ctx.save();ctx.translate(Math.round(x),Math.round(y));rect(22,4,25,7,'#dfe4de');rect(19,10,31,21,'#f2bb8f');rect(18,8,7,13,'#ebeee6');rect(44,8,7,13,'#ebeee6');rect(26,15,4,3,'#283744');rect(39,15,4,3,'#283744');rect(30,20,9,4,'#d48c6b');rect(21,24,27,9,'#f4f4e6');rect(26,31,17,6,'#dfe4de');rect(31,26,9,2,'#896c62');rect(19,37,32,20,'#d74749');rect(23,38,7,18,'#ffdb72');rect(15,39,8,13,'#d74749');rect(47,40,10,7,'#f2bb8f');cloud(0,48,1);rect(26,62,3,5,'#283e61');rect(45,62,3,5,'#283e61');rect(32,70,11,2,'#283e61');text('LULA',22,-5,9);ctx.restore()}
+function steak(x,y,scale=1){ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);rect(4,0,20,4,'#fff1b4');rect(0,4,30,15,'#792e39');rect(3,4,24,13,'#ed6570');rect(5,5,22,3,'#fff1b4');rect(7,11,10,3,'#ffbdab');rect(18,9,5,6,'#a83d4a');rect(7,19,17,3,'#602c3c');ctx.restore()}
+function draw(){rect(0,0,W,H,'#7dd5eb');rect(0,160,W,144,'#b6eee5');rect(505-cam*.05,48,29,29,'#fff2a1');for(let i=0;i<8;i++)cloud((i*170-cam*.16)%1350-50,65+(i%3)*28,.8);
+for(let i=-1;i<15;i++){let x=i*160-cam*.28;ctx.fillStyle=i%2?'#67b7b2':'#83c7b5';ctx.beginPath();ctx.moveTo(x,305);ctx.lineTo(x+22,200);ctx.lineTo(x+55,166+(i%3)*19);ctx.lineTo(x+85,200);ctx.lineTo(x+115,305);ctx.fill();rect(x+47,212,5,10,'#438f99');rect(x+62,212,5,10,'#438f99')}
+for(let i=0;i<25;i++){let x=i*190-cam*.65;rect(x,280,62,25,'#46a579');rect(x+10,267,39,37,'#61bd79');rect(x+22,259,15,20,'#61bd79')}
+ctx.save();ctx.translate(-Math.floor(cam),0);
+for(const p of ground){rect(p.x,p.y,p.w,p.h,'#ae704d');rect(p.x,p.y,p.w,8,'#478c45');rect(p.x,p.y,p.w,4,'#a1dc61');for(let x=p.x;x<p.x+p.w;x+=24){rect(x+3,p.y+17,9,5,'#d69860');rect(x+14,p.y+34,6,4,'#794e44')}}
+for(const p of ledges){rect(p.x,p.y,p.w,p.h,'#a86b48');rect(p.x,p.y,p.w,5,'#ffe09a');rect(p.x,p.y+5,p.w,2,'#ca985a');for(let x=p.x+4;x<p.x+p.w;x+=16)rect(x,p.y+10,9,4,'#d89757')}
+for(const p of pipes){rect(p.x,p.y,p.w,p.h,'#286c58');rect(p.x+5,p.y,p.w-13,p.h,'#50bb71');rect(p.x+8,p.y,6,p.h,'#a3df83');rect(p.x-4,p.y,p.w+8,10,'#286c58');rect(p.x-2,p.y+2,p.w+4,5,'#78ce7b')}
+for(const q of tokens)if(!q.taken){let w=4+Math.abs(Math.sin(t*4+q.x))*5;rect(q.x-w/2,q.y-7,w,14,'#b98435');rect(q.x-w/2,q.y-7,w-2,11,'#ffe57a');rect(q.x-1,q.y-4,2,6,'#fff4bc')}
+for(const e of enemies)if(!e.dead){rect(e.x+3,e.y,16,4,'#7f4034');rect(e.x,e.y+4,22,10,'#ae6450');rect(e.x+3,e.y+7,5,5,'#fff5d4');rect(e.x+14,e.y+7,5,5,'#fff5d4');rect(e.x+6,e.y+8,2,3,'#203141');rect(e.x+14,e.y+8,2,3,'#203141');rect(e.x+4,e.y+14,14,4,'#efc183');rect(e.x-1,e.y+18,9,3,'#493344');rect(e.x+14,e.y+18,9,3,'#493344')}
+rect(1880,246,4,58,'#fff1ba');rect(1884,247,32,17,checkpoint>50?'#f5ce61':'#7892ae');text('✓',1892,261,12);rect(3000,267,4,37,'#82513f');rect(2965,251,77,22,'#ffe2a0');text('QUASE LÁ →',2970,265,10,'#5b3c38');
+rect(3320,264,92,40,'#b87450');rect(3312,252,108,14,'#fff1ae');rect(3317,264,97,5,'#765049');text('CHURRASCO',3322,289,11,'#ffe9ab');
+const cy=105+Math.sin(t*2)*6;lula(cloudX,cy);if(player&&player.x<3090){steak(cloudX+65,cy+55);rect(cloudX+57,cy+46,15,2,'#6c5549')}else{steak(3350,216+Math.sin(t*4)*3);text('PEGUE! ↑',3338,199,10,'#fff4b0')}
+if(player&&(inv<=0||Math.floor(t*12)%2===0))mario(player.x,player.y);ctx.restore();
+rect(220,342,200,5,'#20395480');rect(220,342,200*Math.min(1,(player?.x||0)/3350),5,'#ffdf85');
+if(mode==='won'){for(let i=0;i<50;i++){rect((i*97+t*24)%640,(i*57+(t-winTime)*65)%360,3,5,['#ffdb69','#ef6570','#a5f4c4'][i%3])}}
+}
+reset();mode='title';$('overlay').hidden=false;let last=performance.now(),acc=0;function frame(now){let dt=Math.min((now-last)/1000,.05);last=now;t+=dt;acc+=dt;while(acc>=1/120){update(1/120);acc-=1/120}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></body></html>
